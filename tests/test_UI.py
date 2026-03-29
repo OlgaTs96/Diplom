@@ -20,6 +20,7 @@ def driver():
     driver.quit()
 
 
+@pytest.mark.ui
 def test_authentication_positive(driver):
     """Тест: Успешная авторизация"""
     with allure.step("Открываем страницу и авторизуемся "
@@ -47,6 +48,7 @@ def test_authentication_positive(driver):
             )
 
 
+@pytest.mark.ui
 def test_authentication_negative(driver):
     """Тест: Неуспешная авторизация с неправильными данными"""
     with allure.step("Открываем страницу и пытаемся авторизоваться "
@@ -72,6 +74,7 @@ def test_authentication_negative(driver):
             "не отображается"
 
 
+@pytest.mark.ui
 def test_create_prod(driver):
     """Тест: Создание нового проекта 'Diplom'"""
     with allure.step("Авторизация и создание нового проекта 'Diplom'"):
@@ -102,6 +105,7 @@ def test_create_prod(driver):
             "с текстом 'Diplom'"
 
 
+@pytest.mark.ui
 def test_create_task(driver):
     """Тест: Создание новой задачи 'Задача 1'"""
     with allure.step("Авторизация и открытие проекта для создания задачи"):
@@ -131,6 +135,7 @@ def test_create_task(driver):
             assert task_element is not None, "Не найдена новая доска"
 
 
+@pytest.mark.ui
 def test_del_task(driver):
     """Тест: Удаление задачи 'Задача 1'"""
     with allure.step("Авторизация и удаление задачи 'Задача 1'"):

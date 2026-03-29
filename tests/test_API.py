@@ -15,33 +15,32 @@ API_PASSWORD = os.getenv('API_PASSWORD')
 @pytest.fixture(scope='session')
 def get_token():
     """Фикстура для получения токена один раз за сессию."""
-    global API_key
+    # Получаем ID компании
     creds = {
-        'login': 'ucfh4@dollicons.com',
-        'password': 'Test1234!',
+        'login': API_LOGIN,
+        'password': API_PASSWORD,
     }
     resp = requests.post(f"{BASE_URL}/api-v2/auth/companies", json=creds)
     assert resp.status_code == 200, "Ошибка при получении компании"
-
     company_id = resp.json()['content'][0]['id']
-    creds_auth = {
-        'login': 'ucfh4@dollicons.com',
-        'password': 'Test1234!',
+
+    check_creds = {
+        'login': API_LOGIN,
+        'password': API_PASSWORD,
         'companyId': company_id,
     }
+    check_resp = requests.post(
+        f"{BASE_URL}/api-v2/auth/keys/get", json=check_creds)
 
-    headers = {
-        'Content-Type': 'application/json'
-    }
-    resp = requests.post(
-        f"{BASE_URL}/api-v2/auth/keys",
-        json=creds_auth,
-        headers=headers
-    )
-    assert resp.status_code == 201, "Не удалось получить API ключ"
+    if check_resp.status_code == 200:
+        keys = check_resp.json()
+        if keys and len(keys) > 0:
+            return keys[0]['key']
 
-    API_key = resp.json()['key']
-    return API_key
+    create_resp = requests.post(
+        f"{BASE_URL}/api-v2/auth/keys", json=check_creds)
+    assert create_resp.status_code == 201, "Не удалось создать API ключ"
+    return create_resp.json()['key']
 
 
 @pytest.fixture
@@ -61,31 +60,27 @@ def generate_unique_title():
 @pytest.fixture
 def created_project(headers):
     """Создаёт проект, удаляет после теста."""
-    project_id = None
-    try:
-        title = generate_unique_title()
-        response = requests.post(
-            f"{BASE_URL}/api-v2/projects",
-            headers=headers,
-            json={"title": title}
-        )
-        assert response.status_code == 201, (
-            f"Не удалось создать проект: {response.text}"
-        )
-        project_id = response.json()['id']
-        yield project_id
-    finally:
-        if project_id:
-            delete_response = requests.delete(
-                f"{BASE_URL}/api-v2/projects/{project_id}",
-                headers=headers
-            )
-            if delete_response.status_code not in (200, 204):
-                print(f"Предупреждение: не удалось удалить проект "
-                      f"{project_id}, код {delete_response.status_code}")
+    title = generate_unique_title()
+
+    response = requests.post(
+        f"{BASE_URL}/api-v2/projects",
+        headers=headers,
+        json={"title": title}
+    )
+    assert response.status_code == 201, f"Проект не создан:{response.text}"
+
+    project_id = response.json()['id']
+
+    yield project_id
+
+    requests.put(
+        f"{BASE_URL}/api-v2/projects/{project_id}",
+        headers=headers,
+        json={"deleted": True}
+    )
 
 
-# Тест на создание проекта
+@pytest.mark.api
 def test_create_project_positive(created_project, headers):
     """Позитивный тест: создание проекта и проверка его существования."""
     project_id = created_project
@@ -98,7 +93,7 @@ def test_create_project_positive(created_project, headers):
     assert 'id' in data, "Ответ не содержит id проекта"
 
 
-# Негативный тест: пустое тело при создании
+@pytest.mark.api
 def test_create_project_negative_empty_body(headers):
     response = requests.post(
         f"{BASE_URL}/api-v2/projects",
@@ -110,7 +105,7 @@ def test_create_project_negative_empty_body(headers):
     )
 
 
-# 2. Тесты на изменение проекта
+@pytest.mark.api
 def test_update_project_positive(created_project, headers):
     """Позитивный тест: изменение названия существующего проекта."""
     project_id = created_project
@@ -133,6 +128,7 @@ def test_update_project_positive(created_project, headers):
     assert get_response.json().get('title') == new_title, "Не обновлено"
 
 
+@pytest.mark.api
 def test_update_project_negative_no_id(headers):
     """Негативный тест: PUT запрос без указания ID (ожидается 404 или 405)."""
     new_title = generate_unique_title()
@@ -146,7 +142,7 @@ def test_update_project_negative_no_id(headers):
     )
 
 
-# 3. Тесты на получение проекта по ID
+@pytest.mark.api
 def test_get_project_by_id_positive(created_project, headers):
     """Позитивный тест: получение проекта по ID с авторизацией."""
     project_id = created_project
@@ -162,6 +158,7 @@ def test_get_project_by_id_positive(created_project, headers):
     assert 'title' in data, "Ответ не содержит названия"
 
 
+@pytest.mark.api
 def test_get_project_by_id_negative_no_auth(created_project):
     """Негативный тест: получение проекта без авторизации (ожидается 401)."""
     project_id = created_project

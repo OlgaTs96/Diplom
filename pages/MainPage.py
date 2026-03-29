@@ -75,3 +75,6 @@ class MainPage:
         self.go_to_login_page()
         self.authorization_username(email)
         self.authorization_password(password)
+
+    def go_to_home(self):
+        self._driver.get('https://ru.yougile.com/')
