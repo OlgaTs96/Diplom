@@ -81,6 +81,7 @@ def test_create_prod(driver):
         page = MainPage(driver)
 
         with allure.step("Кликаем кнопку входа и вводим данные"):
+            page.go_to_home
             page.click_login_button()
             email = os.getenv("login")
             password = os.getenv("password")
@@ -112,6 +113,7 @@ def test_create_task(driver):
         page = MainPage(driver)
 
         with allure.step("Кликаем кнопку входа и вводим данные"):
+            page.go_to_home
             page.click_login_button()
             email = os.getenv("login")
             password = os.getenv("password")
